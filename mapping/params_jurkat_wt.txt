@@ -1,0 +1,28 @@
+# BHIVE Hi-C mapping pipeline options.
+# 
+# re_db_path: path to database of digested genomes (must be named 'db')
+# re_organism: organism of digested genome (must be in DB)
+# re_name: name of restriction enzyme used (must be in DB)
+# mapq: minimum contact mapping quality
+# ins_size: maximum molecule insert size
+
+re_db_path = ./db/
+re_organism = hg
+re_name = MboI
+mapq = 10
+ins_size = 2000
+
+# Hi-C SAMPLES, format:
+# datasets:
+# replicate,[{SRR,ERR,DRR} reference or [file1,file2] or [URL1, URL2]]
+#
+# Example,
+# datasets:
+# 1,data/bhive_hic_1.fastq.gz,data/bhive_hic_2.fastq.gz
+# 2,SRR84474942
+# 3,ftp://ftp.someserver.org/files/file_read1.fastq.gz,http://www.someserver.org/files/file_read2.fastq.gz
+
+datasets:
+C029,/users/gfilion/sequencing_data/Heng_Chang/2016-10-28_BHIVE_HiC_GF20/C029_WT_read1.fastq.gz,/users/gfilion/sequencing_data/Heng_Chang/2016-10-28_BHIVE_HiC_GF20/C029_WT_read2.fastq.gz
+C129,/users/gfilion/sequencing_data/Heng_Chang/2017-01-06/C029_17582_read1.fastq.gz,/users/gfilion/sequencing_data/Heng_Chang/2017-01-06/C029_17582_read2.fastq.gz
+C034,/users/gfilion/sequencing_data/Guillaume_Filion/2017-03-09/HiC_Jurkat_C34_18816_read1.fastq.gz,/users/gfilion/sequencing_data/Guillaume_Filion/2017-03-09/HiC_Jurkat_C34_18816_read2.fastq.gz

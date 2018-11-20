@@ -1,0 +1,22 @@
+# Hi-C cooler pipeline, options:
+# mapq:           minimum contact mapping quality
+# chromsize_path: path to file containing chromosome sizes
+
+mapq = 10
+chromsize_path = ./hg19_chromsizes.txt
+
+# Hi-C contact files, format:
+# datasets:
+# replicate name,path to file
+#
+# Example,
+# datasets:
+# EXPR,contacts/hic_C019.txt
+# EXPR,contacts/hic_C020.txt
+# CTRL,contacts/hic_C021.txt
+# CTRL,contacts/hic_C022.txt
+
+datasets:
+Jurkat_wt,../mapping/contacts/C029.hic.gz
+Jurkat_wt,../mapping/contacts/C129.hic.gz
+Jurkat_wt,../mapping/contacts/C034.hic.gz
