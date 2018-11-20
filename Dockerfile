@@ -88,7 +88,7 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1
 RUN pip install cooler
 
 # R libraries
-RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("GenomicRanges", version = "3.8"); BiocManager::install("Sushi", version = "3.8")'
+RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("GenomicRanges", version = "3.8"); BiocManager::install("Sushi", version = "3.8");BiocManager::install("Biostrings", version = "3.8")'
 RUN R -e 'install.packages("gplots", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("ggplot2", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("RColorBrewer", repo="https://cran.cnr.berkeley.edu/")'
