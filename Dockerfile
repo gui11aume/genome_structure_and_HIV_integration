@@ -1,5 +1,13 @@
 FROM ubuntu:14.04.5
 
+# Add repositories
+RUN apt-get update -qq &&   \
+    apt-get install -y      \
+            apt-transport-https
+
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
+    echo "deb https://cloud.r-project.org/bin/linux/ubuntu trusty-cran35/" >> /etc/apt/sources.list
+
 # Software from trusty repositories
 RUN apt-get update -qq &&   \
     apt-get install -y      \
@@ -22,13 +30,16 @@ RUN apt-get update -qq &&   \
             liblzma-dev     \
             libncurses5-dev \
             libfuse-dev     \
-            r-base          \
-            r-recommended   \
+	    libcurl4-openssl-dev \
+	    libxml2-dev     \
+            r-base-core     \
+            r-base-dev      \
+	    r-cran-mgcv	    \
             tabix           \
             pigz            \
             cmake           \
     && apt-get clean &&     \
-    rm -rf /var/lib/apt/lists*
+    rm -rf /var/lib/apt/lists/*
 
 # bwa
 RUN cd / && \
@@ -66,7 +77,7 @@ RUN cd / && \
     ./sra-tools/configure && make -C sra-tools install && \
     mv /usr/local/ncbi/sra-tools/bin/* /usr/local/bin/
 
-# samtools
+# # samtools
 RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1.3.1.tar.bz2 && \
     tar -xvf samtools-1.3.1.tar.bz2 && \
     cd samtools-1.3.1 && \
@@ -77,4 +88,9 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1
 RUN pip install cooler
 
 # R libraries
-RUN R -e 'source("http://bioconductor.org/biocLite.R"); biocLite("GenomicRanges")'
+RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("GenomicRanges", version = "3.8"); BiocManager::install("Sushi", version = "3.8")'
+RUN R -e 'install.packages("gplots", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("ggplot2", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("RColorBrewer", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("gridExtra", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("scales", repo="https://cran.cnr.berkeley.edu/")'
