@@ -18,10 +18,7 @@ hphr.binsize = 1e4
 fig.dir      = 'figures/'
 cmarks.files = 'chip_datasets/reduced/*.bed'
 cmarks.type  = 'reduced' # all or reduced
-cluster.list = list('oe_ice'='clusters/oe_ice/global_clusters.out',
-                    'oe_none'='clusters/oe_none/global_clusters.out',
-                    'raw3_ice'='clusters/raw3_ice/global_clusters.out',
-                    'raw3_none'='clusters/raw3_none/global_clusters.out')
+cluster.list = list('oe_ice'='../clusters/global_clusters.txt')
 global.clust.names = list('oe_ice'=list('0'='A2','1'='B1','2'='B3','3'='A1','4'='B2'),
                           'oe_none'=list('0'='B3','1'='A1','2'='B1','3'='B2','4'='A2'),
                           'raw3_ice'=list('0'='A2','1'='B3','2'='A1','3'='B2','4'='B1'),

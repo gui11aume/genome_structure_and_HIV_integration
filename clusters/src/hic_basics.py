@@ -174,7 +174,7 @@ def interchromosomal_clusters(cf,k,cluster_file,algorithm='eigh-kmeans',interchr
                 c_id += 1
     print "[interchromosomal_clusters] Done."
 
-def cluster_compartments(cf,k,chrlist,eig_dim=None,contact_thr=1,max_sample_size=50000,outlier_pctl=90,corr_outlier_pctl=[5,95],balance_corr_median=False,rm_diags=0,coeffs=None,coeffs_gw=None,seed=None,max_resampling_attempts=10,rearrange_clusters=False,use_oe=True,use_builtin_ice=False,use_ice=False,use_cpb=False,compute_abscore=True,algorithm='eigh-kmeans',outdir='.',out_allchr='clusters_all.txt', return_chr19=True):
+def cluster_compartments(cf,k,chrlist,eig_dim=None,contact_thr=1,max_sample_size=50000,outlier_pctl=90,corr_outlier_pctl=[5,95],balance_corr_median=False,rm_diags=0,coeffs=None,coeffs_gw=None,seed=None,max_resampling_attempts=10,rearrange_clusters=False,use_oe=True,use_builtin_ice=False,use_ice=False,use_cpb=False,compute_abscore=True,algorithm='eigh-kmeans',outdir='.',out_allchr='clusters_all.txt'):
     if algorithm not in ['eigh-gmix','eigh-kmeans','spec-kmeans']:
         print "error: algorithm must be either 'eigh-gmix', 'eigh-kmeans' or 'spec-kmeans'"
         return
@@ -258,12 +258,7 @@ def cluster_compartments(cf,k,chrlist,eig_dim=None,contact_thr=1,max_sample_size
             print "[{}] computing correlation matrix and balancing...".format(chr)
             m_cor = np.corrcoef(m_samp)
             np.fill_diagonal(m_cor,0)
-            
-            if return_chr19 and chr == "chr19":
-               snapshot_mat = np.matrix(m_samp)
-               snapshot_cor = np.matrix(m_cor)
-
-            
+     
             # Increase correlation contrast (5-95 percentiles by default)
             if balance_corr_median:
                 m_cor = m_cor - np.median(m_cor[np.triu_indices(ssize,1)])
@@ -438,7 +433,7 @@ def cluster_compartments(cf,k,chrlist,eig_dim=None,contact_thr=1,max_sample_size
         
     print "[intrachromosomal_clusters] Done."
 
-    return snapshot_mat, snapshot_cor, clusters_idx
+    return clusters_idx
 
         
 def interchromosomal_cluster_matrix(cf,clusters_idx,c1,c2,use_builtin_ice=False):
