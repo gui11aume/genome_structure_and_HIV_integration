@@ -45,7 +45,6 @@ RUN apt-get update -qq &&   \
 RUN cd / && \
     git clone https://github.com/lh3/bwa && \
     cd bwa && \
-    git checkout 5961611c358e480110793bbf241523a3cfac049b && \
     make && \
     cp bwa /usr/local/bin
 
@@ -53,7 +52,6 @@ RUN cd / && \
 RUN cd / && \
     git clone https://github.com/nanakiksc/zerone && \
     cd zerone && \
-    git checkout 449e8289244b38185f0ff37472d3ff55288d9615 && \
     make && \
     cp zerone /usr/local/bin
 
@@ -61,9 +59,14 @@ RUN cd / && \
 RUN cd / && \
     git clone https://github.com/gui11aume/starcode && \
     cd starcode && \
-    git checkout 2255df95d51536be70708c65dc7c5f83bda4be7a && \
     make && \
     ln -s /starcode/starcode /usr/local/bin/starcode
+
+# pandoc (for rmarkdown)
+RUN cd / && \
+    wget https://github.com/jgm/pandoc/releases/download/2.5/pandoc-2.5-1-amd64.deb && \
+    dpkg -i pandoc-2.5-1-amd64.deb && \
+    rm pandoc-2.5-1-amd64.deb
 
 # ncbi tools
 RUN cd / && \
@@ -87,10 +90,15 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1
 # cooler (from pip)
 RUN pip install cooler
 
+# sklearn (from pip)
+RUN pip install sklearn
+
 # R libraries
-RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("GenomicRanges", version = "3.8"); BiocManager::install("Sushi", version = "3.8")'
+RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install(c("GenomicRanges","Sushi","data.table","digest","stringr","pheatmap"), version = "3.8");'
 RUN R -e 'install.packages("gplots", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("ggplot2", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("RColorBrewer", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("gridExtra", repo="https://cran.cnr.berkeley.edu/")'
 RUN R -e 'install.packages("scales", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("rmarkdown", repo="https://cran.cnr.berkeley.edu/")'
+RUN R -e 'install.packages("tidyr", repo="https://cran.cnr.berkeley.edu/")'
