@@ -113,7 +113,6 @@ pdf("ROC_SupplementaryFigure_bybinsizes.pdf", width=3.75, height=9)
 dt[ChIP%in%epigenNamesChosen, make_plot(.SD, .BY), by=binSize, .SDcols=colnames(dt)[c(12:14,17)]]
 dev.off()
 
-dev.off()
 pdf("Figure1B.pdf", width=7.75, height=9)
 make_plot(dt[(ChIP%in%epigenNamesChosen)& binSize==1000, c(3:9,15,17)], "1000")
 dev.off()     
