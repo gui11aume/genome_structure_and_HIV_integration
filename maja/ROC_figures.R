@@ -4,17 +4,14 @@ IS_withaddedvalues_075.Robj contains dataset IS with value for epigenomic sites 
 
 library(parallel)
 library(stringr)
+library(data.table)
 library(pheatmap)
 load("IS_withaddedvalues_075.Robj")
 load("IS_controls_075.Robj")
-GetTheMean <- function(epiNameWithBinsize, listName,IS_control, IS){
-    dt <- as.data.table(IS_control[epiNameWithBinsize,grep(listName, colnames(IS_control))])
-    dt[,RealValue := as.data.table(IS[epiNameWithBinsize,listName])]
-    compare <- function(x){
-        ifelse(dt$RealValue>x,1,ifelse(dt$RealValue==x,1/2,0))
-    }
-    mean(rowSums(sapply(dt[,1:10], function(x)compare(x)))/10)
+compare <- function(x){
+     ifelse(dt$RealValue>x,1,ifelse(dt$RealValue==x,1/2,0))
 }
+
 
 make_plot <- function(dat, group) {
      d <- as.data.frame(dat[,1:(ncol(dat)-1)])
@@ -25,14 +22,6 @@ make_plot <- function(dat, group) {
      )
      
 }    
-GetThePhi <- function(epiNameWithBinsize, listName){
-    dt <- as.data.table(IS_control[epiNameWithBinsize,grep(listName, colnames(IS_control))])
-    dt[,RealValue := as.data.table(IS[epiNameWithBinsize,listName])]
-    compare <- function(x){
-        ifelse(dt$RealValue>x,1,ifelse(dt$RealValue==x,1/2,0))
-    }
-    colMeans(t(sapply(dt[,1:10], function(x)compare(x))))
-}
 
 IS_control <- IS_controls_075
 IS <- IS_075
@@ -124,6 +113,7 @@ pdf("ROC_SupplementaryFigure_bybinsizes.pdf", width=3.75, height=9)
 dt[ChIP%in%epigenNamesChosen, make_plot(.SD, .BY), by=binSize, .SDcols=colnames(dt)[c(12:14,17)]]
 dev.off()
 
+dev.off()
 pdf("Figure1B.pdf", width=7.75, height=9)
 make_plot(dt[(ChIP%in%epigenNamesChosen)& binSize==1000, c(3:9,15,17)], "1000")
 dev.off()     
