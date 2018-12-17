@@ -1,4 +1,4 @@
-nsuppressMessages(library(GenomicRanges))
+suppressMessages(library(GenomicRanges))
 suppressMessages(library(gplots))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(ggplot2))
@@ -16,13 +16,12 @@ hphr.binsize = 1e4
 
 ## Files
 fig.dir      = 'figures/'
+tmp.dir      = 'annotations/'
 cmarks.files = 'chip_datasets/reduced/*.bed'
+cm.raw.path  = 'chip_datasets/reduced/*.bed'
 cmarks.type  = 'reduced' # all or reduced
 cluster.list = list('oe_ice'='../clusters/global_clusters.txt')
-global.clust.names = list('oe_ice'=list('0'='A2','1'='B1','2'='B3','3'='A1','4'='B2'),
-                          'oe_none'=list('0'='B3','1'='A1','2'='B1','3'='B2','4'='A2'),
-                          'raw3_ice'=list('0'='A2','1'='B3','2'='A1','3'='B2','4'='B1'),
-                          'raw3_none'=list('0'='A1','1'='B3','2'='B2','3'='B1','4'='A2'))
+global.clust.names = list('oe_ice'=list('0'='B1','1'='B1','2'='B1','3'='B1','4'='B1'))
 hiv.datasets = 'hiv_datasets/*.integ'
 hiv.expr     = 'expr_datasets/bhive_1_expr.txt'
 gene.expr    = 'expr_datasets/jurkat_rnaseq.tpm'
@@ -37,7 +36,7 @@ sup.enh.file = 'annotations/Jurkat_SE_all.bed'
 hp.sen.file  = 'annotations/hp_sen.txt'
 hp.file      = 'annotations/hiv_hotspots.txt'
 sen.pcs.file = 'annotations/super_enh_ranges'
-cool.file    = 'cool/WT_hg19_5k_q10.cool'
+cool.file    = '../cool/jurkat_wt_hg19_5k_q10.cool'
 hiv.gen.len  = 1e3
 hiv.gen.samp = 200
 rig.gen.tss  = 1e3 ## Offset (upstream and downstream) from TSS
@@ -52,6 +51,7 @@ intrachromosomal_chromatin_heatmaps = TRUE
 interchromosomal_chromatin_heatmap  = TRUE
 interchromosomal_hiv_heatmap        = TRUE
 interchromosomal_chromatin_heatmaps_light = TRUE
+interchromosomal_contact_tests_hiv= TRUE
 interchromosomal_contact_tests = TRUE
 
 
@@ -116,6 +116,12 @@ MaxTable <- function(InVec) {
 ## 9. SuperEnhancers and HD genes.
 ## 9.1. Compute PCS between HD genes and SuperEnhancers (DBsuper)
 
+##
+## 0. Create directories
+##
+
+dir.create(file.path(getwd(), fig.dir), showWarnings = FALSE)
+dir.create(file.path(getwd(), tmp.dir), showWarnings = FALSE)
 
 ##
 ## 1. Read data.
@@ -267,21 +273,36 @@ for (i in seq(1,length(cluster.list))) {
         ## Assemble cluster GR object.
         clu.gr     <- GRanges(seqnames = chr, IRanges(start=clu.idx*hic.binsize, end=(clu.idx+1)*hic.binsize-1),
                               local.cluster  = rep(local.clu, length(clu.idx)),
-                              global.cluster = rep(global.clust.names[[clust.name]][[words[3]]], length(clu.idx)),
+                              global.cluster = rep(words[3], length(clu.idx)),
                               chrom          = rep(chr, length(clu.idx))
                               )
         clust.gr   <- c(clust.gr,clu.gr)
     }
+
+    ## Infer cluster names by size (assumes 5 clusters)
+    global_ord = order(table(clust.gr$global.cluster),decreasing=T)-1
+    chr19_ord = order(table(clust.gr[seqnames(clust.gr) == 'chr19']$global.cluster),decreasing=T)-1
+
+    global.clust.names[['oe_ice']][[as.character(global_ord[1])]] = 'B3'
+    global.clust.names[['oe_ice']][[as.character(global_ord[2])]] = 'A2'
+    global.clust.names[['oe_ice']][[as.character(global_ord[5])]] = 'B2'
+    global.clust.names[['oe_ice']][[as.character(chr19_ord[1])]] = 'A1'
+
+    ## Apply cluster labels
+    for (i in c(0,1,2,3,4)) {
+        clust.gr[clust.gr$global.cluster == i]$global.cluster = global.clust.names[[clust.name]][[as.character(i)]]
+    }
+    
     ## Verbose clusters
     cat('[1.2] ', length(unique(clust.gr$chrom)), ' chromosomes\n', sep='')
     cat('[1.2] ', length(unique(clust.gr$local.cluster)), ' intrachromosomal 3D patterns\n', sep='')
     cat('[1.2] ', length(unique(clust.gr$global.cluster)), ' global 3D patterns\n', sep='')
+    cat('[1.2] ', 'cluster labels: ', as.character(global.clust.names[[clust.name]]), '\n', sep='')
 
     clust.grs[[clust.name]] <- clust.gr
 }
 
 
-##
 ## 2. Data structures.
 ##
 cat('[2. Data structures]\n')
@@ -1039,7 +1060,7 @@ for (c in unique(seqnames(hiv.gr))) {
 hp.count.gr = hp.span[order(hp.span@ranges@width)]
 hiv.hp.gr   = reduce(hp.count.gr[1:(round(length(hp.span)*hp.top.pctl/100))])
 hiv.hp.cnt  = findOverlaps_nw(hiv.hp.gr, hiv.gr, ignore.strand=TRUE)
-hiv.hp.cnt  = as.data.frame(table(hiv.hp.cpnt@from))
+hiv.hp.cnt  = as.data.frame(table(hiv.hp.cnt@from))
 
 hiv.hp.gr$hiv.cnt = 0
 hiv.hp.gr[as.numeric(hiv.hp.cnt$Var1)]$hiv.cnt = hiv.hp.cnt$Freq
@@ -2024,7 +2045,7 @@ for (i in seq(1,length(hiv.ag.rig.chr))) {
 
 }
 
-if (interchromosomal_contact_tests) {
+if (interchromosomal_contact_tests_hiv) {
     ## Write gene file for processing.
     write.table(rbind(hiv.ag.rig, hiv.ag.bg, hiv.sg.rig, hiv.sg.bg),
                 file      = hiv.gen.file,
@@ -2647,6 +2668,8 @@ write.table(rig.expr.ipcs,
             col.names = TRUE
             )
 
+## Filter only the maximum PCS value for each gene.
+rig.expr.max.pcs <- aggregate(pcs~name.1+expr.intv+hiv.target, data=rig.expr.pcs, FUN=max)
 
 ## Density plot
 figure.fn <- paste(fig.dir,'expressed_genes_tss_senh_intrachr_pcs.pdf',sep='')
@@ -2678,9 +2701,6 @@ ggplot(rig.expr.pcs, aes(x=pcs, linetype=hiv.target, colour=expr.intv)) +
     ggtitle('Clustering with SuperEnhancers (Jurkat)') +
     theme_minimal()
 dev.off()
-
-## Filter only the maximum PCS value for each gene.
-rig.expr.max.pcs <- aggregate(pcs~name.1+expr.intv+hiv.target, data=rig.expr.pcs, FUN=max)
 
 ## PCS ecdf
 figure.fn <- paste(fig.dir,'expressed_genes_tss_senh_intrachr_max_pcs_ecdf.pdf',sep='')
@@ -2730,251 +2750,250 @@ ggplot(rig.sen.pcs.data, aes(y=Freq,x=expr.intv, fill=hiv.target)) +
     ggtitle('Contacts with SuperEnhancers') +
     theme_minimal()
 
-##
-## 8.3. Chromatin signal in HD gene bodies.
-##
-cat('[8.3. Chromatin signal in HD gene TSS and TES]\n')
-cm.raw.path = 'chip_datasets/raw_select/*.bed'
+## ##
+## ## 8.3. Chromatin signal in HD gene bodies.
+## ##
+## cat('[8.3. Chromatin signal in HD gene TSS and TES]\n')
 
-## Load data from raw Chip files
-cat('[8.3] Read raw ChIP-seq data from:',cm.raw.path,'\n')
-cm.raw.gr    = GRanges()
-cm.raw.names = c()
+## ## Load data from raw Chip files
+## cat('[8.3] Read raw ChIP-seq data from:',cm.raw.path,'\n')
+## cm.raw.gr    = GRanges()
+## cm.raw.names = c()
 
-## Minimum gene length for analysis.
-rig.gen.len  = rig.gen.tss + rig.gen.tes
+## ## Minimum gene length for analysis.
+## rig.gen.len  = rig.gen.tss + rig.gen.tes
 
-## Convert Top 0.5% to 1%
-hdg.gr = rig.gr
-hdg.gr = hdg.gr[hdg.gr@ranges@width >= rig.gen.len]
-hdg.gr$hiv.dens.intv = as.character(hdg.gr$hiv.dens.intv)
-hdg.gr[hdg.gr$hiv.dens.intv == 'Top 0.5%']$hiv.dens.intv = 'Top 1%'
-hdg.gr[hdg.gr$hiv.dens.intv == 'Top 0.5%-1%']$hiv.dens.intv = 'Top 1%'
+## ## Convert Top 0.5% to 1%
+## hdg.gr = rig.gr
+## hdg.gr = hdg.gr[hdg.gr@ranges@width >= rig.gen.len]
+## hdg.gr$hiv.dens.intv = as.character(hdg.gr$hiv.dens.intv)
+## hdg.gr[hdg.gr$hiv.dens.intv == 'Top 0.5%']$hiv.dens.intv = 'Top 1%'
+## hdg.gr[hdg.gr$hiv.dens.intv == 'Top 0.5%-1%']$hiv.dens.intv = 'Top 1%'
 
-dataset.id = 1
-for (f in Sys.glob(cm.raw.path)) {
-    cat('[8.3] reading file: ',f,'...\n',sep='')
-    ## Extract CM name from filename (text before '_')
-    path         <- strsplit(f,'/')[[1]]
-    fname        <- strsplit(path[length(path)],'.',fixed=T)[[1]][1]
-    cm.name      <- strsplit(fname,'_',fixed=T)[[1]][1]
-    cm.raw.names <- c(cm.raw.names,cm.name)
-    ## Read file (only chr[1-9XY][0-9]*)
-    d            <- subset(read.table(f), grepl("^chr[0-9XY][0-9]*$",V1))
-    d$V1         <- factor(d$V1, unique(d$V1))
-    cm.tmp.gr    <- GRanges(seqnames = Rle(d$V1),
-                            ranges   = IRanges(start=d$V2,end=d$V3),
-                            score    = d$V4,
-                            dataset  = rep(dataset.id,nrow(d)),
-                            name     = rep(cm.name,nrow(d)),
-                            )
-    ## Fill spaces with score 0
-    cm.pad.gr         <- setdiff(genome.gr, cm.tmp.gr)
-    cm.pad.gr$score   <- 0
-    cm.pad.gr$dataset <- dataset.id
-    cm.pad.gr$name    <- cm.name
-    ## Append to global GRanges
-    cm.raw.gr    <- c(cm.raw.gr, cm.tmp.gr, cm.pad.gr)
-    ## Verbose dataset info
-    cat('[8.3] raw chip-seq #',dataset.id,': ',cm.name,' (',nrow(d),' lines)\n',sep='')
-    ## Increase loop counter
-    dataset.id <- dataset.id + 1
-}
+## dataset.id = 1
+## for (f in Sys.glob(cm.raw.path)) {
+##     cat('[8.3] reading file: ',f,'...\n',sep='')
+##     ## Extract CM name from filename (text before '_')
+##     path         <- strsplit(f,'/')[[1]]
+##     fname        <- strsplit(path[length(path)],'.',fixed=T)[[1]][1]
+##     cm.name      <- strsplit(fname,'_',fixed=T)[[1]][1]
+##     cm.raw.names <- c(cm.raw.names,cm.name)
+##     ## Read file (only chr[1-9XY][0-9]*)
+##     d            <- subset(read.table(f), grepl("^chr[0-9XY][0-9]*$",V1))
+##     d$V1         <- factor(d$V1, unique(d$V1))
+##     cm.tmp.gr    <- GRanges(seqnames = Rle(d$V1),
+##                             ranges   = IRanges(start=d$V2,end=d$V3),
+##                             score    = d$V4,
+##                             dataset  = rep(dataset.id,nrow(d)),
+##                             name     = rep(cm.name,nrow(d)),
+##                             )
+##     ## Fill spaces with score 0
+##     cm.pad.gr         <- setdiff(genome.gr, cm.tmp.gr)
+##     cm.pad.gr$score   <- 0
+##     cm.pad.gr$dataset <- dataset.id
+##     cm.pad.gr$name    <- cm.name
+##     ## Append to global GRanges
+##     cm.raw.gr    <- c(cm.raw.gr, cm.tmp.gr, cm.pad.gr)
+##     ## Verbose dataset info
+##     cat('[8.3] raw chip-seq #',dataset.id,': ',cm.name,' (',nrow(d),' lines)\n',sep='')
+##     ## Increase loop counter
+##     dataset.id <- dataset.id + 1
+## }
 
-hdg.signal.data = data.frame(x=c(), clu=c(), intv=c(), chip=c(), anchor=c(), score=c())
-for (intv in unique(hdg.gr$hiv.dens.intv)) {
-    cat('[8.3] generating GRanges intervals for ',intv,'...\n',sep='')
-    tmp.gr.p <- hdg.gr[hdg.gr$hiv.dens.intv == intv & hdg.gr@strand == '+']
-    tmp.gr.n <- hdg.gr[hdg.gr$hiv.dens.intv == intv & hdg.gr@strand == '-']
-    intv.gr <- GRanges()
-    ## TSS
-    for (x in seq(-rig.gen.tss, rig.gen.tss, rig.gen.step)) {
-        ## Create interval around gene TSS
-        intv.gr <- c(intv.gr,
-                     GRanges(seqnames = Rle(tmp.gr.p@seqnames),
-                             ranges   = IRanges(start=tmp.gr.p@ranges@start + x, end=tmp.gr.p@ranges@start + x + rig.gen.bin),
-                             x        = rep(x, length(tmp.gr.p@seqnames)),
-                             anchor   = rep('TSS', length(tmp.gr.p@seqnames)),
-                             active   = tmp.gr.p$active
-                             ),
-                     GRanges(seqnames = Rle(tmp.gr.n@seqnames),
-                             ranges   = IRanges(start=tmp.gr.n@ranges@start + tmp.gr.n@ranges@width - x - rig.gen.bin, end=tmp.gr.n@ranges@start + tmp.gr.n@ranges@width - x),
-                             x        = rep(x, length(tmp.gr.n@seqnames)),
-                             anchor   = rep('TSS', length(tmp.gr.n@seqnames)),
-                             active   = tmp.gr.n$active
-                             )
-                     )
-    }
+## hdg.signal.data = data.frame(x=c(), clu=c(), intv=c(), chip=c(), anchor=c(), score=c())
+## for (intv in unique(hdg.gr$hiv.dens.intv)) {
+##     cat('[8.3] generating GRanges intervals for ',intv,'...\n',sep='')
+##     tmp.gr.p <- hdg.gr[hdg.gr$hiv.dens.intv == intv & hdg.gr@strand == '+']
+##     tmp.gr.n <- hdg.gr[hdg.gr$hiv.dens.intv == intv & hdg.gr@strand == '-']
+##     intv.gr <- GRanges()
+##     ## TSS
+##     for (x in seq(-rig.gen.tss, rig.gen.tss, rig.gen.step)) {
+##         ## Create interval around gene TSS
+##         intv.gr <- c(intv.gr,
+##                      GRanges(seqnames = Rle(tmp.gr.p@seqnames),
+##                              ranges   = IRanges(start=tmp.gr.p@ranges@start + x, end=tmp.gr.p@ranges@start + x + rig.gen.bin),
+##                              x        = rep(x, length(tmp.gr.p@seqnames)),
+##                              anchor   = rep('TSS', length(tmp.gr.p@seqnames)),
+##                              active   = tmp.gr.p$active
+##                              ),
+##                      GRanges(seqnames = Rle(tmp.gr.n@seqnames),
+##                              ranges   = IRanges(start=tmp.gr.n@ranges@start + tmp.gr.n@ranges@width - x - rig.gen.bin, end=tmp.gr.n@ranges@start + tmp.gr.n@ranges@width - x),
+##                              x        = rep(x, length(tmp.gr.n@seqnames)),
+##                              anchor   = rep('TSS', length(tmp.gr.n@seqnames)),
+##                              active   = tmp.gr.n$active
+##                              )
+##                      )
+##     }
 
-    ## TES
-    for (x in seq(-rig.gen.tes, rig.gen.tes, rig.gen.step)) {
-        ## Create interval around gene TES
-        intv.gr <- c(intv.gr,
-                     GRanges(seqnames = Rle(tmp.gr.p@seqnames),
-                             ranges   = IRanges(start=tmp.gr.p@ranges@start + tmp.gr.p@ranges@width + x, end=tmp.gr.p@ranges@start + tmp.gr.p@ranges@width + x + rig.gen.bin),
-                             x        = rep(x, length(tmp.gr.p@seqnames)),
-                             anchor   = rep('TES', length(tmp.gr.p@seqnames)),
-                             active   = tmp.gr.p$active
-                             ),
-                     GRanges(seqnames = Rle(tmp.gr.n@seqnames),
-                             ranges   = IRanges(start=tmp.gr.n@ranges@start - x - rig.gen.bin, end=tmp.gr.n@ranges@start - x),
-                             x        = rep(x, length(tmp.gr.n@seqnames)),
-                             anchor   = rep('TES', length(tmp.gr.n@seqnames)),
-                             active   = tmp.gr.n$active
-                             )
-                     )
-    }
-    ## Add 3D pattern information to TSS/TES intervals
-    intv.clu.ov  <- findOverlaps_nw(intv.gr, clust.gr, ignore.strand = TRUE)
-    intv.clu.ref <- data.frame(intv.id = intv.clu.ov@from, clu = clust.gr[intv.clu.ov@to]$global.cluster)
-    intv.gr$clust <- NA
-    intv.gr@elementMetadata$clust[intv.clu.ref$intv.id] <- as.character(intv.clu.ref$clu)
+##     ## TES
+##     for (x in seq(-rig.gen.tes, rig.gen.tes, rig.gen.step)) {
+##         ## Create interval around gene TES
+##         intv.gr <- c(intv.gr,
+##                      GRanges(seqnames = Rle(tmp.gr.p@seqnames),
+##                              ranges   = IRanges(start=tmp.gr.p@ranges@start + tmp.gr.p@ranges@width + x, end=tmp.gr.p@ranges@start + tmp.gr.p@ranges@width + x + rig.gen.bin),
+##                              x        = rep(x, length(tmp.gr.p@seqnames)),
+##                              anchor   = rep('TES', length(tmp.gr.p@seqnames)),
+##                              active   = tmp.gr.p$active
+##                              ),
+##                      GRanges(seqnames = Rle(tmp.gr.n@seqnames),
+##                              ranges   = IRanges(start=tmp.gr.n@ranges@start - x - rig.gen.bin, end=tmp.gr.n@ranges@start - x),
+##                              x        = rep(x, length(tmp.gr.n@seqnames)),
+##                              anchor   = rep('TES', length(tmp.gr.n@seqnames)),
+##                              active   = tmp.gr.n$active
+##                              )
+##                      )
+##     }
+##     ## Add 3D pattern information to TSS/TES intervals
+##     intv.clu.ov  <- findOverlaps_nw(intv.gr, clust.gr, ignore.strand = TRUE)
+##     intv.clu.ref <- data.frame(intv.id = intv.clu.ov@from, clu = clust.gr[intv.clu.ov@to]$global.cluster)
+##     intv.gr$clust <- NA
+##     intv.gr@elementMetadata$clust[intv.clu.ref$intv.id] <- as.character(intv.clu.ref$clu)
 
-    ## Overlap with data
-    tmp.ov  <- findOverlaps_nw(cm.raw.gr, intv.gr, ignore.strand = TRUE)
+##     ## Overlap with data
+##     tmp.ov  <- findOverlaps_nw(cm.raw.gr, intv.gr, ignore.strand = TRUE)
     
-    hdg.signal.data <- rbind(hdg.signal.data,
-                             data.frame(x      = intv.gr$x[tmp.ov@to],
-                                        clu    = intv.gr$clust[tmp.ov@to],
-                                        intv   = intv,
-                                        chip   = cm.raw.gr$name[tmp.ov@from],
-                                        anchor = intv.gr$anchor[tmp.ov@to],
-                                        score  = cm.raw.gr$score[tmp.ov@from],
-                                        active = intv.gr$active[tmp.ov@to]
-                                        )
-                             )
-}
+##     hdg.signal.data <- rbind(hdg.signal.data,
+##                              data.frame(x      = intv.gr$x[tmp.ov@to],
+##                                         clu    = intv.gr$clust[tmp.ov@to],
+##                                         intv   = intv,
+##                                         chip   = cm.raw.gr$name[tmp.ov@from],
+##                                         anchor = intv.gr$anchor[tmp.ov@to],
+##                                         score  = cm.raw.gr$score[tmp.ov@from],
+##                                         active = intv.gr$active[tmp.ov@to]
+##                                         )
+##                              )
+## }
 
-## Aggregate signal to compute median and 5-95 percentiles.
-hdg.signal.agg = do.call(data.frame, aggregate(score ~ x+intv+chip+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
+## ## Aggregate signal to compute median and 5-95 percentiles.
+## hdg.signal.agg = do.call(data.frame, aggregate(score ~ x+intv+chip+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
 
-hdg.signal.clu.agg = do.call(data.frame, aggregate(score ~ x+chip+clu+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
+## hdg.signal.clu.agg = do.call(data.frame, aggregate(score ~ x+chip+clu+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
 
-hdg.signal.all = do.call(data.frame, aggregate(score ~ x+chip+intv+clu+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
+## hdg.signal.all = do.call(data.frame, aggregate(score ~ x+chip+intv+clu+anchor+active, data = hdg.signal.data, FUN = function(x) c(median = median(x), mean = mean(x))))
 
-### HOTSPOTS
-## Sort TSS/TES
-hdg.signal.agg$anchor = factor(hdg.signal.agg$anchor, c('TSS','TES'))
-hdg.signal.agg$active = as.character(hdg.signal.agg$active)
-hdg.signal.agg[hdg.signal.agg$active == TRUE,'active'] = 'Active'
-hdg.signal.agg[hdg.signal.agg$active == FALSE,'active'] = 'Silent'
-hdg.signal.agg$active = factor(hdg.signal.agg$active, c('Active','Silent'))
+## ### HOTSPOTS
+## ## Sort TSS/TES
+## hdg.signal.agg$anchor = factor(hdg.signal.agg$anchor, c('TSS','TES'))
+## hdg.signal.agg$active = as.character(hdg.signal.agg$active)
+## hdg.signal.agg[hdg.signal.agg$active == TRUE,'active'] = 'Active'
+## hdg.signal.agg[hdg.signal.agg$active == FALSE,'active'] = 'Silent'
+## hdg.signal.agg$active = factor(hdg.signal.agg$active, c('Active','Silent'))
 
-## Figure with TSS/TES signal for each chip-seq profile
-figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_hotspots.pdf',sep='')
-cat('[8.3] Chromatin signal in HD gene TSS and TES plots (hotspots) -> ',figure.fn,'\n',sep='')
-pdf(figure.fn, useDingbats=F, width=14, height=14)
-ggplot(data=hdg.signal.agg[hdg.signal.agg$intv == c('No HIV','Top 1%','Top 5%-10%'),], aes(x=x, y=score.mean, color=intv, linetype=active)) +
-    geom_line() +
-    facet_wrap(~chip+anchor, scales='free_y')
-dev.off()
+## ## Figure with TSS/TES signal for each chip-seq profile
+## figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_hotspots.pdf',sep='')
+## cat('[8.3] Chromatin signal in HD gene TSS and TES plots (hotspots) -> ',figure.fn,'\n',sep='')
+## pdf(figure.fn, useDingbats=F, width=14, height=14)
+## ggplot(data=hdg.signal.agg[hdg.signal.agg$intv == c('No HIV','Top 1%','Top 5%-10%'),], aes(x=x, y=score.mean, color=intv, linetype=active)) +
+##     geom_line() +
+##     facet_wrap(~chip+anchor, scales='free_y')
+## dev.off()
 
-## 3D PATTERNS
-## Sort TSS/TES
-hdg.signal.clu.agg$anchor = factor(hdg.signal.clu.agg$anchor, c('TSS','TES'))
-hdg.signal.clu.agg$active = as.character(hdg.signal.clu.agg$active)
-hdg.signal.clu.agg[hdg.signal.clu.agg$active == TRUE,'active'] = 'Active'
-hdg.signal.clu.agg[hdg.signal.clu.agg$active == FALSE,'active'] = 'Silent'
-hdg.signal.clu.agg$active = factor(hdg.signal.clu.agg$active, c('Active','Silent'))
+## ## 3D PATTERNS
+## ## Sort TSS/TES
+## hdg.signal.clu.agg$anchor = factor(hdg.signal.clu.agg$anchor, c('TSS','TES'))
+## hdg.signal.clu.agg$active = as.character(hdg.signal.clu.agg$active)
+## hdg.signal.clu.agg[hdg.signal.clu.agg$active == TRUE,'active'] = 'Active'
+## hdg.signal.clu.agg[hdg.signal.clu.agg$active == FALSE,'active'] = 'Silent'
+## hdg.signal.clu.agg$active = factor(hdg.signal.clu.agg$active, c('Active','Silent'))
 
-## Figure with TSS/TES signal for each chip-seq profile
-figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_clust.pdf',sep='')
-cat('[8.3] Chromatin signal in HD gene TSS and TES plots (clusters) -> ',figure.fn,'\n',sep='')
-pdf(figure.fn, useDingbats=F, width=14, height=14)
-ggplot(data=hdg.signal.clu.agg, aes(x=x, y=score.mean, color=clu, linetype=active)) +
-    geom_line() +
-    facet_wrap(~chip+anchor, scales='free_y')
-dev.off()
+## ## Figure with TSS/TES signal for each chip-seq profile
+## figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_clust.pdf',sep='')
+## cat('[8.3] Chromatin signal in HD gene TSS and TES plots (clusters) -> ',figure.fn,'\n',sep='')
+## pdf(figure.fn, useDingbats=F, width=14, height=14)
+## ggplot(data=hdg.signal.clu.agg, aes(x=x, y=score.mean, color=clu, linetype=active)) +
+##     geom_line() +
+##     facet_wrap(~chip+anchor, scales='free_y')
+## dev.off()
 
-## BOTH
-hdg.signal.all$anchor = factor(hdg.signal.all$anchor, c('TSS','TES'))
-hdg.signal.all$active = as.character(hdg.signal.all$active)
-hdg.signal.all[hdg.signal.all$active == TRUE,'active'] = 'Active'
-hdg.signal.all[hdg.signal.all$active == FALSE,'active'] = 'Silent'
-hdg.signal.all$active = factor(hdg.signal.all$active, c('Active','Silent'))
+## ## BOTH
+## hdg.signal.all$anchor = factor(hdg.signal.all$anchor, c('TSS','TES'))
+## hdg.signal.all$active = as.character(hdg.signal.all$active)
+## hdg.signal.all[hdg.signal.all$active == TRUE,'active'] = 'Active'
+## hdg.signal.all[hdg.signal.all$active == FALSE,'active'] = 'Silent'
+## hdg.signal.all$active = factor(hdg.signal.all$active, c('Active','Silent'))
 
-## Figure with TSS/TES signal for each chip-seq profile
-figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_all.pdf',sep='')
-cat('[8.3] Chromatin signal in HD gene TSS and TES plots (hotspots and clusters)-> ',figure.fn,'\n',sep='')
-pdf(figure.fn, useDingbats=F, width=14, height=14)
-ggplot(data=hdg.signal.all[hdg.signal.all$intv == c('No HIV','Top 1%','Top 5%-10%'),], aes(x=x, y=score.mean, color=clu, linetype=active)) +
-    geom_line() +
-    facet_wrap(~chip+intv+anchor, scales='free_y')
-dev.off()
+## ## Figure with TSS/TES signal for each chip-seq profile
+## figure.fn <- paste(fig.dir,'hiv_hdgenes_tss_tes_chip_all.pdf',sep='')
+## cat('[8.3] Chromatin signal in HD gene TSS and TES plots (hotspots and clusters)-> ',figure.fn,'\n',sep='')
+## pdf(figure.fn, useDingbats=F, width=14, height=14)
+## ggplot(data=hdg.signal.all[hdg.signal.all$intv == c('No HIV','Top 1%','Top 5%-10%'),], aes(x=x, y=score.mean, color=clu, linetype=active)) +
+##     geom_line() +
+##     facet_wrap(~chip+intv+anchor, scales='free_y')
+## dev.off()
 
-## Genome browser-like figure.
+## ## Genome browser-like figure.
 
-## Read clusters in bed format, reassign cluster order. (Update with each cluster computation)
-##clust.bed = read.table(cluster.list[[def.clust]], header=F, col.names=c('chrom','start','end','name'))
-clust.bed = data.frame(chrom=seqnames(clust.gr), start=start(clust.gr), end=end(clust.gr), name=clust.gr$global.cluster)
-clust.bed$score = 1 #B3
-clust.bed$score[clust.bed$name == 'A1'] = 5 #A1
-clust.bed$score[clust.bed$name == 'B1'] = 3 #B1
-clust.bed$score[clust.bed$name == 'B2'] = 2 #B2
-clust.bed$score[clust.bed$name == 'A2'] = 4 #A2
+## ## Read clusters in bed format, reassign cluster order. (Update with each cluster computation)
+## ##clust.bed = read.table(cluster.list[[def.clust]], header=F, col.names=c('chrom','start','end','name'))
+## clust.bed = data.frame(chrom=seqnames(clust.gr), start=start(clust.gr), end=end(clust.gr), name=clust.gr$global.cluster)
+## clust.bed$score = 1 #B3
+## clust.bed$score[clust.bed$name == 'A1'] = 5 #A1
+## clust.bed$score[clust.bed$name == 'B1'] = 3 #B1
+## clust.bed$score[clust.bed$name == 'B2'] = 2 #B2
+## clust.bed$score[clust.bed$name == 'A2'] = 4 #A2
 
-## HIV, genes and SE datasets in BED format.
-hiv.bed = data.frame(chrom=hiv.gr@seqnames, start=hiv.gr@ranges@start, end=hiv.gr@ranges@start+1)
-sen.bed = data.frame(chrom=sen.data$chr, start=sen.data$beg, end=sen.data$end)
-gen.gr = sort(genes.gr)
-gen.bed = data.frame(chrom=seqnames(gen.gr), start=start(gen.gr), end=end(gen.gr), value=gen.gr$expr, act=gen.gr$active)
-gen.bed$row = 1
-gen.bed$row[gen.bed$act] = 2
+## ## HIV, genes and SE datasets in BED format.
+## hiv.bed = data.frame(chrom=hiv.gr@seqnames, start=hiv.gr@ranges@start, end=hiv.gr@ranges@start+1)
+## sen.bed = data.frame(chrom=sen.data$chr, start=sen.data$beg, end=sen.data$end)
+## gen.gr = sort(genes.gr)
+## gen.bed = data.frame(chrom=seqnames(gen.gr), start=start(gen.gr), end=end(gen.gr), value=gen.gr$expr, act=gen.gr$active)
+## gen.bed$row = 1
+## gen.bed$row[gen.bed$act] = 2
 
-## Define Figure regions.
-chr  = c('chr16','chr2','chr1','chr1','chr1','chr17','chr19','chr5')
-cbeg = c(73e6,96e6,40e6,157e6,225e6,62e6,5e6,50e6)
-cend = c(77e6,100e6,44e6,161e6,235e6,66e6,30e6,60e6)
-hcol = c(100,100,100,100,200,100,300,200)
+## ## Define Figure regions.
+## chr  = c('chr16','chr2','chr1','chr1','chr1','chr17','chr19','chr5')
+## cbeg = c(73e6,96e6,40e6,157e6,225e6,62e6,5e6,50e6)
+## cend = c(77e6,100e6,44e6,161e6,235e6,66e6,30e6,60e6)
+## hcol = c(100,100,100,100,200,100,300,200)
 
-signals = c('H3K27Ac','H3K9me3','CTCF','BRD4','MYC')
+## signals = c('H3K27Ac','H3K9me3','CTCF','BRD4','MYC')
 
-## Iterate over all Figure regions.
-for (i in seq(1,length(chr))) {
-    ## Call Python script, store to file (autogen name).
-    hic_coords = paste(chr[i],':',formatC(cbeg[i],format='d'),'-',formatC(cend[i],format='d'),sep='')
-    cat('Fetching matrix from Hi-C file for region:',hic_coords,'\n')
-    system(paste('python src/cooler_to_mat.py', cool.file, hic_coords,'annotations/hic_tmp_mat.txt'))
-    ## Read Hi-C matrix.
-    hic_m = as.matrix(read.table('annotations/hic_tmp_mat.txt', header=T, row.names=1, check.names=F))
+## ## Iterate over all Figure regions.
+## for (i in seq(1,length(chr))) {
+##     ## Call Python script, store to file (autogen name).
+##     hic_coords = paste(chr[i],':',formatC(cbeg[i],format='d'),'-',formatC(cend[i],format='d'),sep='')
+##     cat('Fetching matrix from Hi-C file for region:',hic_coords,'\n')
+##     system(paste('python src/cooler_to_mat.py', cool.file, hic_coords,'annotations/hic_tmp_mat.txt'))
+##     ## Read Hi-C matrix.
+##     hic_m = as.matrix(read.table('annotations/hic_tmp_mat.txt', header=T, row.names=1, check.names=F))
 
-    ## Figure with TSS/TES signal for each chip-seq profile (autogen name based on region).
-    figure.fn <- paste(fig.dir,'genome_',chr[i],'_',formatC(cbeg[i],format='d'),'_',formatC(cend[i],format='d'),'.pdf',sep='')
-    cat('[8.3] Genome browser-like figure ',chr[i],':',cbeg[i],'-',cend[i],' -> ',figure.fn,'\n',sep='')
-    pdf(figure.fn, useDingbats=F, width=14, height=14)
-    sigcnt = length(signals)
-    layout(matrix(seq(1,sigcnt+5),sigcnt+5,1,byrow=T), widths=c(1), heights=c(c(10,3,5,1,2),rep(2,sigcnt-1),4))
-    par(mar=c(1,3.5,1,2))
-    phic = plotHic(log1p(hic_m), chr[i], cbeg[i], cend[i], max_y = hcol[i], zrange=c(0,6), palette = SushiColors(7))
-    par(mar=c(0,3.5,0,2))
-    plotBed(beddata = hiv.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], ylab='HIV')
-    mtext('HIV',side=2,line=1.75,cex=0.6,font=2)
-                                        #mtext('HIV',side=2,line=1.75,cex=1,font=2)
-    par(mar=c(0,3.5,0,2))
-    clust.bed.allrows = rbind(clust.bed,data.frame(chrom=rep(chr[i],5),start=rep(cbeg[i],5),end=rep(cbeg[i]+1),name=rep('B3',5),score=c(1,2,3,4,5)))
-    plotBed(beddata = clust.bed.allrows, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], colorby=clust.bed.allrows$score, colorbycol=SushiColors(5), row='given',rownumber=clust.bed.allrows$score,type='region',rowlabels=rev(c('A1','A2','B1','B2','B3')),rowlabelcex=0.75, plotbg='grey95')
-    par(mar=c(0,3.5,0,2))
-    plotBed(beddata = sen.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], rowlabels='SE', rowlabelcex=0.75, rownumber=1, row='given')
-    par(mar=c(0,3.5,0,2))
-    plotBed(beddata = gen.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], rowlabelcex=0.75, row='given', rownumber=gen.bed$row, type='region', rowlabels=c('silgen', 'actgen'))
-    for (signame in signals) {
-        cr.sub = cm.raw.gr[cm.raw.gr@seqnames == chr[i] & cm.raw.gr@ranges@start >= cbeg[i] & cm.raw.gr@ranges@start < cend[i] & cm.raw.gr$name == signame]
-        bg.data = data.frame(chrom=cr.sub@seqnames, start=cr.sub@ranges@start, end=cr.sub@ranges@start+cr.sub@ranges@width-1, value=cr.sub$score)
-        if (signame == signals[length(signals)]) {
-            par(mar=c(3.5,3.5,0,2))
-            plotBedgraph(bg.data, chr[i], cbeg[i], cend[i])
-            #axis(side=2,las=2,cex=0.5,font=2)
-            mtext(signame,side=2,line=1.75,cex=0.6,font=2)
-            labelgenome(chr[i],cbeg[i],cend[i],scale='Mb')
-        } else {
-            par(mar=c(0,3.5,0,2))
-            plotBedgraph(bg.data, chr[i], cbeg[i], cend[i])
-            #axis(side=2,las=2,cex=0.5,font=2)
-            mtext(signame,side=2,line=1.75,cex=0.6,font=2)
-        }
-    }
-    dev.off()
-}
+##     ## Figure with TSS/TES signal for each chip-seq profile (autogen name based on region).
+##     figure.fn <- paste(fig.dir,'genome_',chr[i],'_',formatC(cbeg[i],format='d'),'_',formatC(cend[i],format='d'),'.pdf',sep='')
+##     cat('[8.3] Genome browser-like figure ',chr[i],':',cbeg[i],'-',cend[i],' -> ',figure.fn,'\n',sep='')
+##     pdf(figure.fn, useDingbats=F, width=14, height=14)
+##     sigcnt = length(signals)
+##     layout(matrix(seq(1,sigcnt+5),sigcnt+5,1,byrow=T), widths=c(1), heights=c(c(10,3,5,1,2),rep(2,sigcnt-1),4))
+##     par(mar=c(1,3.5,1,2))
+##     phic = plotHic(log1p(hic_m), chr[i], cbeg[i], cend[i], max_y = hcol[i], zrange=c(0,6), palette = SushiColors(7))
+##     par(mar=c(0,3.5,0,2))
+##     plotBed(beddata = hiv.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], ylab='HIV')
+##     mtext('HIV',side=2,line=1.75,cex=0.6,font=2)
+##                                         #mtext('HIV',side=2,line=1.75,cex=1,font=2)
+##     par(mar=c(0,3.5,0,2))
+##     clust.bed.allrows = rbind(clust.bed,data.frame(chrom=rep(chr[i],5),start=rep(cbeg[i],5),end=rep(cbeg[i]+1),name=rep('B3',5),score=c(1,2,3,4,5)))
+##     plotBed(beddata = clust.bed.allrows, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], colorby=clust.bed.allrows$score, colorbycol=SushiColors(5), row='given',rownumber=clust.bed.allrows$score,type='region',rowlabels=rev(c('A1','A2','B1','B2','B3')),rowlabelcex=0.75, plotbg='grey95')
+##     par(mar=c(0,3.5,0,2))
+##     plotBed(beddata = sen.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], rowlabels='SE', rowlabelcex=0.75, rownumber=1, row='given')
+##     par(mar=c(0,3.5,0,2))
+##     plotBed(beddata = gen.bed, chrom=chr[i], chromstart=cbeg[i], chromend=cend[i], rowlabelcex=0.75, row='given', rownumber=gen.bed$row, type='region', rowlabels=c('silgen', 'actgen'))
+##     for (signame in signals) {
+##         cr.sub = cm.raw.gr[cm.raw.gr@seqnames == chr[i] & cm.raw.gr@ranges@start >= cbeg[i] & cm.raw.gr@ranges@start < cend[i] & cm.raw.gr$name == signame]
+##         bg.data = data.frame(chrom=cr.sub@seqnames, start=cr.sub@ranges@start, end=cr.sub@ranges@start+cr.sub@ranges@width-1, value=cr.sub$score)
+##         if (signame == signals[length(signals)]) {
+##             par(mar=c(3.5,3.5,0,2))
+##             plotBedgraph(bg.data, chr[i], cbeg[i], cend[i])
+##             #axis(side=2,las=2,cex=0.5,font=2)
+##             mtext(signame,side=2,line=1.75,cex=0.6,font=2)
+##             labelgenome(chr[i],cbeg[i],cend[i],scale='Mb')
+##         } else {
+##             par(mar=c(0,3.5,0,2))
+##             plotBedgraph(bg.data, chr[i], cbeg[i], cend[i])
+##             #axis(side=2,las=2,cex=0.5,font=2)
+##             mtext(signame,side=2,line=1.75,cex=0.6,font=2)
+##         }
+##     }
+##     dev.off()
+## }
 
 
 

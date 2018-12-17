@@ -68,7 +68,7 @@ def center_diag(mat, offset):
     d[~np.isnan(d)] = td
     return mean_val, span
 
-def interchromosomal_clusters(cf,k,cluster_file,algorithm='eigh-kmeans',interchr_mat=None,use_builtin_ice=False,use_ice=False,use_cpb=False,mat_save_dir='.',out_file='global_clusters.out'):
+def interchromosomal_clusters(cf,k,cluster_file,algorithm='eigh-kmeans',interchr_mat=None,use_builtin_ice=False,use_ice=False,use_cpb=False,save_mat=False,mat_save_dir='.',plot_mat=False,out_file='global_clusters.out'):
     if algorithm not in ['eigh-gmix','eigh-kmeans','spec-kmeans']:
         print "error: algorithm must be either 'eigh-gmix', 'eigh-kmeans' or 'spec-kmeans'"
         
@@ -120,8 +120,9 @@ def interchromosomal_clusters(cf,k,cluster_file,algorithm='eigh-kmeans',interchr
             # Newline.
             sys.stdout.write('\n')
         # Store matrices for future processing
-        np.save('{}/interchr_normat.npy'.format(mat_save_dir),normat)
-        np.save('{}/interchr_sums.npy'.format(mat_save_dir),mat)
+        if save_mat:
+           np.save('{}/interchr_normat.npy'.format(mat_save_dir),normat)
+           np.save('{}/interchr_sums.npy'.format(mat_save_dir),mat)
         
     else:
         print "Using user-provided interchromosomal matrix for cluster computation."
@@ -151,18 +152,20 @@ def interchromosomal_clusters(cf,k,cluster_file,algorithm='eigh-kmeans',interchr
     P[np.arange(0,len(clu_idx)),clu_idx] = 1
     # Permute rows and columns.
     W_clust = np.dot(np.dot(P,normat),np.linalg.inv(P))
-    plt.matshow(W_clust,cmap=plt.cm.bwr)
+    if plot_mat:
+       plt.matshow(W_clust,cmap=plt.cm.bwr)
 
     clust_cnt = [(g[0], len(list(g[1]))) for g in itertools.groupby(sorted(hic_clust))]
     # Compute cluster limits
     cnt = np.zeros(k+1,dtype=int)
     for i in xrange(k):
-        cnt[i] += clust_cnt[i][1]
+       cnt[i] += clust_cnt[i][1]
     cmcnt = np.cumsum(cnt)
     l = W_clust.shape[0]-1
-    for x in cmcnt:
-        plt.plot([0,l], [x,x], color='k', linestyle='-', linewidth=1)
-        plt.plot([x,x], [0,l], color='k', linestyle='-', linewidth=1)
+    if plot_mat:
+       for x in cmcnt:
+          plt.plot([0,l], [x,x], color='k', linestyle='-', linewidth=1)
+          plt.plot([x,x], [0,l], color='k', linestyle='-', linewidth=1)
 
     print "writing results to {}...".format(out_file)
     with open(out_file,'w+') as fo:
