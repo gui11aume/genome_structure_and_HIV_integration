@@ -1,9 +1,5 @@
 load("genidf.Robj")
 library(ggplot2)
-genidf$RIGSLISTE <- ifelse(genidf$numberOfLists>=2, "2 or more", 
-                           ifelse(genidf$numberOfLists==1, "1", "0"))
-
-
 
 SupplementaryFig1D <- ggplot(genidf, aes(x=RIGSLISTE, fill=SuperenhancersA))+
      geom_bar(position="fill")+
@@ -11,9 +7,11 @@ SupplementaryFig1D <- ggplot(genidf, aes(x=RIGSLISTE, fill=SuperenhancersA))+
      xlab("")+
      theme_light()+
      coord_polar(theta="y")+
-     scale_fill_discrete("RIGs lists")+
-     theme(legend.position = "bottom")
-ggsave(SupplementaryFig1D, file="SupplementaryFigure1D.pdf", width=5, height = 5)
+     scale_fill_discrete("")+
+     theme(legend.position = "bottom")+
+    scale_y_continuous( labels=scales::percent_format())
+
+ggsave(SupplementaryFig1D, file="SupplementaryFigure1D.pdf", width=6, height = 6)
 
 Fig1C <- ggplot(genidf, aes(x=factor(numberOfLists), y=distanceToNearestSE))+
      stat_boxplot(geom="errorbar", coef=2.3 )+
@@ -51,6 +49,7 @@ Fig2B <- ggplot(genidf[gene_biotype=="protein_coding"],aes(x=as.factor(numberOfL
      xlab("Number of lists")+
      theme_light()
 ggsave(Fig2B, file="Figure2B.pdf", width=7, height = 5)
+
 Fig2C <- ggplot(genidf[gene_biotype=="protein_coding"], aes(x=RIGSLISTE, fill=RIGSLISTE,
                                                             y= i.Mean))+
      stat_boxplot(geom="errorbar")+
@@ -64,19 +63,22 @@ ggsave(Fig2C, file="Figure2C.pdf", width=7, height = 5)
 
 limits <- quantile(genidf[gene_biotype=="protein_coding"][i.Mean>0, i.Mean], c(0.1, 0.9))
 genidf[, ExpressionGroups:=factor(ifelse(i.Mean<=0,"Not expressed", 
-                                  ifelse(i.Mean<=limits[1], "Low10%",
-                                         ifelse(i.Mean<=limits[2], "Mid","High10%")
+                                         ifelse(i.Mean<=limits[1], "Low10%",
+                                                ifelse(i.Mean<=limits[2], "Mid","High10%")
                                          )
-                                  ),
-                                   levels=c("Not expressed", "Low10%", "Mid", "High10%")     
-                                   )]
+),
+levels=c("Not expressed", "Low10%", "Mid", "High10%")     
+)]
 Figure2D <- ggplot(genidf[gene_biotype=="protein_coding"], aes(x=RIGSLISTE,fill=SuperenhancersA))+
      geom_bar(position="fill")+
      facet_grid(~ExpressionGroups)+
      theme_light()+
      theme(legend.position = "bottom")+
      ylab("")+
-     xlab("")
+     xlab("Number of lists genes are found in")+ 
+     scale_fill_discrete("")+
+     scale_y_continuous( labels=scales::percent_format())
+
 ggsave(Figure2D, file="Figure2D.pdf", width=10, height = 5)
 
 Fig3D <- ggplot(gg[gg$gene_biotype=="protein_coding",], aes(numberOfLists,Mean))+
@@ -95,11 +97,10 @@ SupplementaryFig2B <- ggplot(genidf[gene_biotype=="protein_coding"], aes(Activat
      ylab("-log10FC(p adjusted value)")+
      xlab("log2FC")+
      theme(legend.position = "bottom")
-ggsave(SupplementaryFig2B, file="SupplementaryFigure2B.pdf", width=7, height = 7)
+ggsave(SupplementaryFig2B, file="SupplementaryFigure2E.pdf", width=7, height = 7)
 
 
 library(RColorBrewer)
-genidf$ChangeInActivatedUponJQ1
 SupplementaryFig2C <- ggplot(genidf[gene_biotype=="protein_coding"], aes(RIGSLISTE, fill=ChangeInActivatedUponJQ1))+
      geom_bar(position="fill")+
      facet_wrap(~SuperenhancersA)+
@@ -110,5 +111,7 @@ SupplementaryFig2C <- ggplot(genidf[gene_biotype=="protein_coding"], aes(RIGSLIS
           values = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(3)[c(1,2,3)],
           breaks = c("DownregulatedUponJQ1","UnchangedUponJQ1","UpregulatedUponJQ1"),
           labels = c("Downregulated", "No significant change", "Upregulated")
-     )
-ggsave(SupplementaryFig2C, file="SupplementaryFigure2C.pdf", width=7, height = 5)
+     )+
+    scale_y_continuous( labels=scales::percent_format())+theme_light()
+
+ggsave(SupplementaryFig2C, file="SupplementaryFigure2F.pdf", width=7, height = 5)
