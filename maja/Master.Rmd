@@ -111,7 +111,10 @@ Fig3D
 
 #### A) HIV-1 integration sites inside genes. The box plot represents the percentage of integration sites inside genes for cART-treated patients in violet (6 lists in total) and in vitro infections in blue (2 lists in total). The red line depicts the median and whiskers stretch from 5th to 95th percentile.  
 
-Plot is made in excel from table available as Adiitional file 1.
+```{r}
+source("Supplementary figure 1a.R")
+supplementary1a
+```
 
 
 #### B) Analysis of the number of unique genes containing integration sites versus number of observed integrations. All integration datasets are sorted by decreasing size and the cumulative number of integration sites is plotted on the X-axis while the Y-axis shows the number of unique genes that have integrations. The number of unique genes found when analyzing different numbers of datasets linearly depends on the number of integrations in the observed data sets (adjusted R2 = 0.9849, p = 7.7x10-8).  
