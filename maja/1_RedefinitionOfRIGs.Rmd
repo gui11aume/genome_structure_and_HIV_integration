@@ -1,0 +1,102 @@
+---
+title: "Redefinition of RIGs with new Brady IS"
+output: html_notebook
+author: Maja Kuzman
+---
+
+```{r, message=FALSE}
+library(GenomicRanges)
+library(data.table)
+```
+
+Loading the integration data sets and updating the Brady data set:
+```{r}
+load("is.Robj")
+is$Brady <- NULL
+brady <- fread("IntegrationSitesInActivatedALLCells_bushman.txt")
+brady <- GRanges(brady$V1, IRanges(brady$V2,brady$V2))
+is$Brady <- brady
+```
+
+Counting number of integration sites per lists:
+```{r}
+source("2_AdditionalFile1.R")
+TableM1
+```
+
+Percentage of IS in genes:
+```{r}
+invitro = mean(unlist(TableM1[3,c("Lucic","Brady")]))
+invitro
+patients = mean(unlist(TableM1[3,c("Maldarelli","Cohn","Han","Ikeda","Kok","Wagner")]))
+patients
+```
+```{r}
+source("3_Supplementary figure 1a.R")
+supplementary1a
+```
+```{r}
+source("4_Supplementary figure 1b.R")
+plotSaturation
+```
+
+
+Loading genes, updating number of lists:
+```{r}
+load("GRCh37AllGenes.Robj")
+ovlsinGenes <- sapply(is, function(x)(countOverlaps(geni, x, ignore.strand=T)>0))
+geni$numberOfLists <- rowSums(ovlsinGenes)
+
+RIGsnumbers <- data.frame(table(geni$numberOfLists),
+           cumsum=sapply(0:7, function(i)sum(geni$numberOfLists>=i)),
+           expressed=as.numeric(table(genidf[,.(numberOfLists)])),
+           cs2=sapply(0:7, function(i)sum(genidf$numberOfLists>=i)),
+           expressed2=as.numeric(table(genidf[gene_biotype=="protein_coding",.(numberOfLists)])),
+           cs3=sapply(0:7, function(i)sum(genidf[gene_biotype=="protein_coding"]$numberOfLists>=i))
+
+)
+colnames(RIGsnumbers) <- c("NrLists","ExactNrGenesOnLists", "MoreThanListAllGenes", "ExactExpressed","MorethanlistExpressed", "ExactProtCod","MoreThanProtCod")
+
+RIGsnumbers
+```
+
+Number of protein coding genes in our data set:
+```{r}
+genidf$RIGSLISTE
+genidf[gene_biotype=="protein_coding",.N,RIGSLISTE]
+```
+
+Saving list of protein coding RIGs, and list of protein coding genes with NO integration, for Figure 1A:
+```{r}
+write.table(genidf[(gene_biotype=="protein_coding")&(RIGSLISTE=="2 or more"),"names"], 
+            row.names = F, col.names = F,
+            quote=F,
+            file="RIGs2ormore.txt")
+write.table(genidf[(gene_biotype=="protein_coding")&(RIGSLISTE=="0"),"names"], 
+            row.names = F, col.names = F,
+            quote=F,
+            file="RIGs0.txt")
+
+```
+
+Super enhancers and RIGs:
+```{r}
+genidf[,.N,.(SuperenhancersA,RIGSLISTE)]
+```
+
+Expression and RIGs:
+```{r}
+
+limits <- quantile(genidf[gene_biotype=="protein_coding"][i.Mean>0, i.Mean], c(0.1, 0.9))
+genidf[, ExpressionGroups:=factor(ifelse(i.Mean<=0,"Not expressed", 
+                                         ifelse(i.Mean<=limits[1], "Low10%",
+                                                ifelse(i.Mean<=limits[2], "Mid","High10%")
+                                         )
+    ),
+    levels=c("Not expressed", "Low10%", "Mid", "High10%")     
+    )]
+genidf[gene_biotype=="protein_coding",.N,.(ExpressionGroups,RIGSLISTE)][order(ExpressionGroups, RIGSLISTE)]
+
+```
+
+The rest of the figures are plotted in Master.Rmd document.
