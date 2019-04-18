@@ -28,7 +28,7 @@ $PATHTOFastxtoolkit0013/bin/fastq_to_fasta -i SRR886086${i}_clean.fastq -o SRR88
 done
 ```
 
-##### BLAT to hg18, hg19:
+##### BLAT to hg19:
 
 ```{bash}
 
