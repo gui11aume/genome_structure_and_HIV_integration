@@ -1,6 +1,6 @@
-PATHTOFastxtoolkit0013=/YOURPATH/fastx_toolkit_0.0.13
-PATHTObbmap=/YOURPATH/bbmap
-PATHTOpblat=/YOURPATH/icebert-pblat-e05e284/pblat
+PATHTOFastxtoolkit0013=/YOURPATH/fastx_toolkit_0.0.13  
+PATHTObbmap=/YOURPATH/bbmap  
+PATHTOpblat=/YOURPATH/icebert-pblat-e05e284/pblat  
 
 
 ##### Trimming:
