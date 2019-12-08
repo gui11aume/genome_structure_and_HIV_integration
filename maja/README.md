@@ -1,8 +1,7 @@
 ### Information  
 The following repository accompanies the paper 
-```
-Lucic, B., Chen, H., Kuzman, M., Zorita. E. et al. Spatially clustered loci with multiple enhancers are frequent targets of HIV-1 integration. Nat Commun 10, 4059 (2019) doi:10.1038/s41467-019-12046-3  
-```
+Lucic, B., Chen, H., Kuzman, M., Zorita. E. et al. Spatially clustered loci with multiple enhancers are frequent targets of HIV-1 integration. Nat Commun 10, 4059 (2019) [doi:10.1038/s41467-019-12046-3](https://www.nature.com/articles/s41467-019-12046-3)
+
 
 They are supplementary material to the paper, and their usage is explained in the methods and supplementary methods of the paper.  
 
