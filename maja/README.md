@@ -34,13 +34,13 @@ is.Robj	- integration sites used in the paper as an R object, this file is used 
 
 IS_withaddedvalues_075.Robj	- integration sites and values of epigenetic features for the calculation of ROC analysis.   
 
-RS_random_matched_controls.Robj	- random matched control sites and values of epigenetic features for the ROC analysis, I generated 10 random matched controls for every true site in the paper. See supplementary methods for details.     
+RS_random_matched_controls.Robj	- random matched control sites and values of epigenetic features for the ROC analysis, I generated 10 random matched controls for every true site in the paper. See (Supplementary methods)[https://static-content.springer.com/esm/art%3A10.1038%2Fs41467-019-12046-3/MediaObjects/41467_2019_12046_MOESM2_ESM.pdf] for details.     
 
 genidf.Robj	- coordinates of genes used in the paper (hg19)   
 
 roc.Robj - values for the ROC analysis plot    
 
-Replicates.RDS - more random matched controls (100) generated for the review process. For details see correspondance with the reviewers.  	 
+Replicates.RDS - more random matched controls (100) generated for the review process. For details see (Peer review file)[https://static-content.springer.com/esm/art%3A10.1038%2Fs41467-019-12046-3/MediaObjects/41467_2019_12046_MOESM2_ESM.pdf] .  	 
 ## List of R packages (dependencies for the .Robj and RDS files and scripts):   
 R version >= 3.5  
 
