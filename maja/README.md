@@ -42,6 +42,17 @@ roc.Robj - values for the ROC analysis plot
 
 Replicates.RDS - more random matched controls (100) generated for the review process. For details see correspondance with the reviewers.  	 
 ## List of R packages used (dependencies for the .Robj and RDS files):   
+R version >= 3.5  
 
-
+## R libraries
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install(c("GenomicRanges","Sushi","data.table","digest","stringr","pheatmap"), version = "3.8");
+install.packages("gplots", repo="https://cran.cnr.berkeley.edu/")
+install.packages("ggplot2", repo="https://cran.cnr.berkeley.edu/")
+install.packages("RColorBrewer", repo="https://cran.cnr.berkeley.edu/")
+install.packages("gridExtra", repo="https://cran.cnr.berkeley.edu/")
+install.packages("scales", repo="https://cran.cnr.berkeley.edu/")
+install.packages("rmarkdown", repo="https://cran.cnr.berkeley.edu/")
+install.packages("tidyr", repo="https://cran.cnr.berkeley.edu/")
+```
 
