@@ -41,4 +41,7 @@ genidf.Robj	- coordinates of genes used in the paper (hg19)
 roc.Robj - values for the ROC analysis plot    
 
 Replicates.RDS - more random matched controls (100) generated for the review process. For details see correspondance with the reviewers.  	 
+## List of R packages used (dependencies for the .Robj and RDS files):   
+
+
 
